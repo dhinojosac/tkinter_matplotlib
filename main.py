@@ -9,24 +9,46 @@ from matplotlib import style
 import tkinter as tk
 from tkinter import ttk
 
+import urllib.request
+import json
+
+import pandas as pd
+import numpy as np
+from datetime import datetime
+
 LARGE_FONT = ("Verdana", 12)
 style.use("ggplot")
 
-f = Figure(figsize=(5,5), dpi=100)
+f = Figure(figsize=(6,4), dpi=100)
 a = f.add_subplot(111)
+samples = 0
 
 def animate(i):
-    pullData = open("sampleData.txt", "r").read()
-    dataList = pullData.split("\n")
-    xList = []
-    yList = []
-    for eachLine in dataList:
-        if len(eachLine) > 1:
-            x,y = eachLine.split(",")
-            xList.append(int(x))
-            yList.append(int(y))
+    xData = []
+    dataLink = "https://blockchain.info/ticker"
+    data = urllib.request.urlopen(dataLink).read().decode("ascii", "ignore")
+    data = json.loads(data)
+    #print(data["USD"]["last"]) #debug data from API
+    data = pd.DataFrame(data)
+    #print(data)
+
+    #buys = data[(data["last"]=="bid")]
+    buys = data["USD"]
+    print(buys)
+    #buys["datestamp"] = np.array(buys["timestamp"]).astype("datetime64[s]")
+    #buyDates = (buys["datestamp"]).tolist()
+
+    #sells = data[(data["type"]=="ask")]
+    sells = data["USD"]
+    print(sells)
+    #sells["datestamp"] = np.array(sells["timestamp"]).astype("datetime64[s]")
+    #sellDates = (sells["datestamp"]).tolist()
+    global samples
+    samples = datetime.now()
+    xData.append(samples)
     a.clear()
-    a.plot(xList, yList)
+    a.plot_date(xData, buys["buy"])
+    a.plot_date(xData, sells["sell"])
 
 class SeaofBTCapp(tk.Tk):
     def __init__(self, *args, **kwargs):
@@ -44,7 +66,7 @@ class SeaofBTCapp(tk.Tk):
         container.grid_columnconfigure(0, weight=1)
 
         self.frames = {}
-        for F in (StartPage, PageOne, PageTwo, PageThree):
+        for F in (StartPage, PageOne, PageTwo, BTCe_page):
             frame = F(container, self)
             self.frames[F] = frame
             frame.grid(row=0, column=0, sticky="nsew")
@@ -61,15 +83,16 @@ def qf(param):
 class StartPage(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-        label = tk.Label(self, text="Start Page", font=LARGE_FONT)
+        label = tk.Label(self, text="ALPHA BTC trading application", font=LARGE_FONT)
+        label.pack(pady=10, padx=10)
+        label = tk.Label(self, text="Use at your own risk. There is no promise of warranty", font=LARGE_FONT)
         label.pack(pady=10, padx=10)
 
-        button1 = ttk.Button(self, text="Visit Page 1", command=lambda:  controller.show_frame(PageOne) )
+        button1 = ttk.Button(self, text="Agree", command=lambda:  controller.show_frame(BTCe_page) )
         button1.pack()
-        button2 = ttk.Button(self, text="Visit Page 2", command=lambda:  controller.show_frame(PageTwo) )
+
+        button2 = ttk.Button(self, text="Disagree", command=quit )
         button2.pack()
-        button3 = ttk.Button(self, text="Visit Graph Page", command=lambda:  controller.show_frame(PageThree) )
-        button3.pack()
 
 class PageOne(tk.Frame):
     def __init__(self, parent, controller):
@@ -89,7 +112,7 @@ class PageTwo(tk.Frame):
         button1 = ttk.Button(self, text="Back to Home", command=lambda:  controller.show_frame(StartPage) )
         button1.pack()
 
-class PageThree(tk.Frame):
+class BTCe_page(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         label = tk.Label(self, text="Graph Page", font=LARGE_FONT)
